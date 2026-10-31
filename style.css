@@ -1,0 +1,260 @@
+/* よる（ダーク）: 黒い窓に白い枠 */
+:root, [data-theme="dark"] {
+  --bg: #000;
+  --win: #000;
+  --line: #fff;
+  --ink: #fff;
+  --sub: #6f6f6f;
+  --gold: #ffd84a;
+  --flash: #fff;
+}
+/* ひる（ライト）: 青空と草原のフィールドに黒い窓（窓の色は夜と同じ） */
+[data-theme="light"] {
+  --bg: #5dbb46;
+  --sub: #7a7a7a;
+}
+[data-theme="light"] .win { filter: drop-shadow(0 8px 0 rgba(0, 0, 0, .28)); }
+
+/* フィールド（ひるだけ） */
+.scene { position: fixed; inset: 0; z-index: -1; overflow: hidden; display: none;
+  background: linear-gradient(#2c7ad8 0 16%, #3f8be4 16% 30%, #579deb 30% 42%, #73b1f1 42% 52%, #93c6f6 52% 59%, #b6dbfa 59% 64%); }
+[data-theme="light"] .scene { display: block; }
+.hills { position: absolute; left: 0; right: 0; top: 50%; height: 16%; background: #3d8c3a; }
+.hills.far { top: 46%; background: #6aa9c9; }
+.ground { position: absolute; left: 0; right: 0; top: 64%; bottom: 0;
+  background-color: #5dbb46;
+  border-top: 10px solid #3f9a32;
+  background-image: radial-gradient(#479f35 2.5px, transparent 3px), radial-gradient(#7bd25a 2.5px, transparent 3px);
+  background-size: 28px 28px, 40px 40px;
+  background-position: 0 0, 14px 20px; }
+.tree { position: absolute; width: 48px; height: 72px; }
+.tree::before { content: ""; position: absolute; inset: 0 0 14px; background: #2c6e2a;
+  clip-path: polygon(50% 0, 62% 0, 62% 20%, 75% 20%, 75% 45%, 88% 45%, 88% 70%, 100% 70%, 100% 100%, 0 100%, 0 70%, 12% 70%, 12% 45%, 25% 45%, 25% 20%, 38% 20%, 38% 0); }
+.tree::after { content: ""; position: absolute; left: 40%; width: 20%; bottom: 0; height: 16px; background: #7a4a22; }
+.cloud { position: absolute; left: -20vw; width: 16px; height: 16px; animation: drift linear infinite; }
+@keyframes drift { to { transform: translateX(130vw); } }
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "DotGothic16", monospace;
+  transition: background .3s;
+}
+main { max-width: 1400px; height: 100vh; margin: 0 auto; padding: 3vh 3vw 5vh; display: flex; flex-direction: column; gap: 5vh; }
+main > * { flex: none; }
+.quest { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding-top: 1.4em; padding-bottom: 1.4em; }
+
+/* ウィンドウ */
+.win {
+  position: relative;
+  background: var(--win);
+  border: 4px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 0 0 4px var(--win), 0 0 0 6px var(--line);
+  padding: 1.1em 1.4em;
+}
+.win-title {
+  position: absolute;
+  top: 0; left: 1.2em;
+  transform: translateY(-55%);
+  background: var(--win);
+  padding: 0 .5em;
+  font-size: clamp(16px, 1.5vw, 24px);
+  line-height: 1;
+}
+
+/* 上の小さなコマンド */
+.topbar { display: flex; justify-content: flex-end; align-items: center; gap: .8em; font-size: clamp(14px, 1.2vw, 20px); margin-bottom: -1.6vh; }
+.cmd {
+  font: inherit; color: var(--ink);
+  background: var(--win);
+  border: 3px solid var(--line);
+  border-radius: 8px;
+  padding: .25em .8em;
+  cursor: pointer;
+  position: relative;
+}
+
+
+/* クエスト */
+.quest ul.two { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; column-gap: 1.5em; align-content: start; }
+.quest ul { list-style: none; margin: 0; padding: 0; flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--sub) transparent; }
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.1em 1fr auto;
+  align-items: center;
+  gap: .35em;
+  padding: .35em 0;
+  font-size: var(--fs, clamp(34px, 4.2vw, 68px));
+  line-height: 1.35;
+  cursor: pointer;
+  user-select: none;
+}
+.cursor { font-size: .8em; }
+/* ドラッグで並べ替え */
+.row.dragging { opacity: .35; }
+.row.drop-before { box-shadow: inset 0 4px 0 var(--gold); }
+.row.drop-after { box-shadow: inset 0 -4px 0 var(--gold); }
+.row.next .cursor::before { content: "▶"; animation: blink 1s steps(1) infinite; }
+.row:hover .cursor::before { content: "▶"; animation: none; }
+.text { word-break: break-word; }
+.row.done .text { color: var(--sub); text-decoration: line-through; text-decoration-thickness: .1em; }
+.clear { font-size: .5em; color: var(--gold); white-space: nowrap; }
+.row.pop .clear { animation: pop .4s steps(3); }
+@keyframes pop { from { transform: scale(2.4); opacity: 0; } }
+.row.lit { animation: appear .4s steps(4); }
+@keyframes appear { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+.side { display: flex; align-items: center; gap: .4em; }
+.actions { display: none; gap: .4em; }
+.row:hover .actions { display: flex; }
+.done-btn {
+  font: inherit;
+  font-size: .45em;
+  color: var(--ink);
+  background: var(--win);
+  border: 3px solid var(--line);
+  border-radius: 8px;
+  padding: .15em .8em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.done-btn:hover { background: var(--gold); border-color: var(--gold); color: #000; }
+.actions button, .log-close {
+  font: inherit;
+  font-size: clamp(15px, 1.3vw, 22px);
+  color: var(--ink);
+  background: var(--win);
+  border: 3px solid var(--line);
+  border-radius: 8px;
+  padding: .15em .7em;
+  cursor: pointer;
+}
+.actions button:hover, .log-close:hover { background: var(--ink); color: var(--win); }
+
+.edit-input {
+  width: 100%;
+  font: inherit; color: var(--ink);
+  background: transparent;
+  border: none; border-bottom: 3px dashed var(--line);
+  outline: none;
+}
+
+.add-win { padding-top: 1em; padding-bottom: 1em; }
+.add {
+  display: flex; align-items: center; gap: .5em;
+  font-size: clamp(22px, 2.2vw, 36px);
+  cursor: text;
+}
+.add .plus { color: var(--gold); }
+#new {
+  flex: 1; min-width: 0;
+  font: inherit; color: var(--ink);
+  background: transparent; border: none; outline: none;
+  caret-color: var(--gold);
+}
+#new::placeholder { color: var(--sub); }
+.none { margin: 0; font-size: clamp(26px, 2.8vw, 46px); color: var(--sub); padding: .2em 0; }
+
+/* メッセージ */
+@keyframes blink { 50% { opacity: 0; } }
+
+/* 戦闘シーン（メッセージ窓の右） */
+.battle-win { padding-top: 2.4em; padding-bottom: 1.4em; }
+.battle {
+  --px: clamp(5px, .6vw, 9px);
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: calc(4 * var(--px));
+  padding: 0 calc(2 * var(--px)) calc(2 * var(--px));
+}
+.battle::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(2 * var(--px)); background: #3f9a32; }
+.sprite { display: block; image-rendering: pixelated; }
+.hero { position: relative; z-index: 1; animation: idle 1s steps(1) infinite; }
+.hero .f1 { animation: frame-a .8s steps(1) infinite; }
+.hero .f2 { position: absolute; left: 0; top: 0; animation: frame-b .8s steps(1) infinite; }
+@keyframes frame-a { 50% { visibility: hidden; } }
+@keyframes frame-b { 0% { visibility: hidden; } 50% { visibility: visible; } }
+@keyframes idle { 50% { transform: translateY(calc(-1 * var(--px))); } }
+.hero.attack { animation: attack .5s steps(4); }
+@keyframes attack { 50% { transform: translateX(calc(12 * var(--px))); } }
+.hero.victory { animation: jump .6s steps(2) infinite; }
+@keyframes jump { 50% { transform: translateY(calc(-2 * var(--px))); } }
+.foes { display: flex; align-items: flex-end; gap: calc(3 * var(--px)); }
+.foe { position: relative; animation: idle 1.2s steps(1) infinite; }
+.foe:nth-child(2n) { animation-delay: -.6s; }
+.foe.fly { margin-bottom: calc(9 * var(--px)); }
+.foe.target::before {
+  content: "▼";
+  position: absolute; left: 50%; bottom: 100%;
+  transform: translateX(-50%);
+  color: var(--gold);
+  font-size: calc(4 * var(--px));
+  animation: blink 1s steps(1) infinite;
+}
+.foe.dying { animation: die .7s steps(1) forwards; }
+@keyframes die { 0%, 30%, 60% { opacity: 1; } 15%, 45%, 75%, 100% { opacity: 0; } }
+.foe.dying::after {
+  content: "";
+  position: absolute; left: -15%; right: -15%; top: 45%;
+  height: var(--px);
+  background: #e6fbff;
+  box-shadow: 0 0 calc(2 * var(--px)) #8be8ff, 0 0 calc(5 * var(--px)) #4fd2ff;
+  transform: rotate(-35deg);
+  animation: slash .2s steps(3) both;
+}
+@keyframes slash { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.foe.spawn { animation: spawn .5s steps(1); }
+@keyframes spawn { 0%, 40% { opacity: 0; } 20%, 60% { opacity: 1; } 50% { opacity: .3; } }
+.more { align-self: center; color: var(--sub); font-size: calc(4 * var(--px)); white-space: nowrap; }
+
+/* ぜんぶクリアで画面が光る */
+.flash { position: fixed; inset: 0; background: var(--flash); pointer-events: none; opacity: 0; z-index: 30; }
+.flash.go { animation: flash .6s steps(1) 1; }
+@keyframes flash { 0%, 40% { opacity: .9; } 20%, 60% { opacity: 0; } 80% { opacity: .6; } 100% { opacity: 0; } }
+
+/* きろく */
+.log {
+  position: fixed; inset: 0; z-index: 20;
+  display: grid; place-items: center;
+  padding: 5vh 5vw;
+  background: rgba(0, 0, 0, .6);
+}
+.log[hidden] { display: none; }
+.log .win { width: min(1000px, 100%); max-height: 86vh; overflow: auto; }
+.log-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .4em; }
+.log-title { font-size: clamp(22px, 2.2vw, 36px); color: var(--gold); }
+.cal-nav { display: flex; justify-content: center; align-items: center; gap: 1.2em; font-size: clamp(20px, 2vw, 32px); margin-bottom: .5em; }
+.cal-btn { font: inherit; color: var(--ink); background: none; border: none; cursor: pointer; padding: 0 .3em; }
+.cal-btn:hover { color: var(--gold); }
+.cal-week, .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-week { text-align: center; color: var(--sub); font-size: clamp(14px, 1.3vw, 20px); margin-bottom: 4px; }
+.cal-week span:first-child { color: #ff7a6a; }
+.cal-week span:last-child { color: #7ab8ff; }
+.cell {
+  min-height: clamp(52px, 6vw, 84px);
+  border: 2px solid #333;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: clamp(13px, 1.2vw, 18px);
+  display: flex; flex-direction: column; justify-content: space-between;
+  color: var(--sub);
+}
+.cell.blank { border: none; }
+.cell.has { border-color: var(--line); color: var(--ink); cursor: pointer; }
+.cell.has:hover { background: #1c1c1c; }
+.cell.today { box-shadow: inset 0 0 0 3px var(--gold); }
+.cell.sel { background: #2a2a2a; }
+.cell .mark { align-self: flex-end; font-size: 1.15em; }
+.cell .mark.star { color: var(--gold); font-size: 1.6em; line-height: 1; }
+.cal-detail { margin-top: 1em; padding-top: .8em; border-top: 3px dotted var(--sub); font-size: clamp(20px, 2vw, 32px); }
+.day-head { display: flex; justify-content: space-between; margin-bottom: .3em; }
+.day-score { color: var(--gold); }
+.day-item { display: flex; gap: .6em; line-height: 1.5; }
+.day-item.miss { color: var(--sub); }
+.log-empty { color: var(--sub); margin: 0; }

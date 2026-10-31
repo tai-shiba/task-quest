@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>きょうの クエスト</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<script>
+  // 描画前にテーマを決めて、ちらつきを防ぐ
+  (function () {
+    let t = localStorage.getItem('today-board-theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="scene" id="scene" aria-hidden="true">
+  <div class="hills far" id="hillsFar"></div>
+  <div class="hills" id="hills"></div>
+  <div class="ground"></div>
+</div>
+<main>
+  <div class="topbar">
+    <button class="cmd" id="themeBtn" role="switch" aria-label="昼（ライト）と夜（ダーク）の切り替え" title="昼 / 夜"></button>
+    <button class="cmd" id="logBtn">ぼうけんの きろく</button>
+  </div>
+
+  <section class="win add-win">
+    <label class="add">
+      <span class="plus">＋</span>
+      <input id="new" type="text" placeholder="クエストを受注する" autocomplete="off" autofocus>
+    </label>
+  </section>
+
+  <section class="win quest">
+    <span class="win-title">きょうの クエスト</span>
+    <ul id="list"></ul>
+    <p class="none" id="none">クエストは まだ ない。</p>
+  </section>
+
+  <section class="win battle-win">
+    <div class="battle" id="battle" aria-hidden="true"></div>
+  </section>
+</main>
+
+<div class="flash" id="flash"></div>
+
+<section class="log" id="log" hidden>
+  <div class="win">
+    <div class="log-head"><span class="log-title">ぼうけんの きろく</span><button class="log-close" id="logClose">とじる</button></div>
+    <div class="cal-nav">
+      <button class="cal-btn" id="calPrev" aria-label="前の月">◀</button>
+      <span id="calMonth"></span>
+      <button class="cal-btn" id="calNext" aria-label="次の月">▶</button>
+    </div>
+    <div class="cal-week"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+    <div class="cal" id="cal"></div>
+    <div class="cal-detail" id="calDetail"></div>
+  </div>
+</section>
+
+<script src="sprites.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
