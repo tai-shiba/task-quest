@@ -45,7 +45,7 @@ body {
 }
 main { max-width: 1400px; height: 100vh; margin: 0 auto; padding: 3vh 3vw 5vh; display: flex; flex-direction: column; gap: 5vh; }
 main > * { flex: none; }
-.quest { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding-top: 1.4em; padding-bottom: 1.4em; }
+.win.quest { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: clamp(52px, 4.6vw, 80px) clamp(24px, 2.6vw, 48px) clamp(24px, 2.4vw, 40px); }
 
 /* ウィンドウ */
 .win {
@@ -56,27 +56,56 @@ main > * { flex: none; }
   box-shadow: 0 0 0 4px var(--win), 0 0 0 6px var(--line);
   padding: 1.1em 1.4em;
 }
-.win-title {
+/* 窓の上の枠にかかる札（クエストボードの看板と、クリアの数） */
+.plate {
   position: absolute;
-  top: 0; left: 1.2em;
-  transform: translateY(-55%);
-  background: var(--win);
-  padding: 0 .5em;
-  font-size: clamp(16px, 1.5vw, 24px);
-  line-height: 1;
-}
-
-/* 上の小さなコマンド */
-.topbar { display: flex; justify-content: flex-end; align-items: center; gap: .8em; font-size: clamp(14px, 1.2vw, 20px); margin-bottom: -1.6vh; }
-.cmd {
-  font: inherit; color: var(--ink);
+  top: 0;
+  transform: translateY(-50%);
   background: var(--win);
   border: 3px solid var(--line);
   border-radius: 8px;
-  padding: .25em .8em;
+  box-shadow: 0 0 0 3px var(--win), 0 0 0 5px var(--line);
+  line-height: 1;
+  white-space: nowrap;
+}
+.win-title {
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: .4em 1.3em;
+  font-size: clamp(18px, 1.7vw, 28px);
+  letter-spacing: .12em;
+  color: var(--gold);
+}
+.win-title::before, .win-title::after { content: "◆"; font-size: .55em; vertical-align: .25em; color: var(--ink); }
+.win-title::before { margin-right: .8em; }
+.win-title::after { margin-left: .8em; }
+.win-count {
+  right: 2.4em;
+  padding: .3em .8em;
+  font-size: clamp(14px, 1.2vw, 20px);
+}
+.win-count b { font-weight: normal; color: var(--gold); }
+.win-count[hidden] { display: none; }
+
+/* 上の小さなコマンド */
+.topbar { display: flex; justify-content: flex-end; align-items: center; gap: 1.2em; padding: 6px; font-size: clamp(20px, 1.9vw, 32px); }
+.cmd {
+  display: flex; align-items: center; gap: .45em;
+  font: inherit; color: var(--ink);
+  background: var(--win);
+  border: 4px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 0 0 4px var(--win), 0 0 0 6px var(--line);
+  padding: .4em 1.1em;
   cursor: pointer;
   position: relative;
 }
+.cmd:hover { color: var(--gold); }
+.cmd:focus-visible { outline: 3px solid var(--gold); outline-offset: 10px; }
+.check:focus-visible, .edit-btn:focus-visible, .log-close:focus-visible, .kind:focus-visible, .cal-btn:focus-visible {
+  outline: 3px solid var(--gold); outline-offset: 3px;
+}
+[data-theme="light"] .cmd { filter: drop-shadow(0 8px 0 rgba(0, 0, 0, .28)); }
 
 
 /* クエスト */
@@ -85,7 +114,7 @@ main > * { flex: none; }
 .row {
   position: relative;
   display: grid;
-  grid-template-columns: 1.1em 1fr auto;
+  grid-template-columns: 1.1em auto 1fr auto;
   align-items: center;
   gap: .35em;
   padding: .35em 0;
@@ -103,28 +132,50 @@ main > * { flex: none; }
 .row:hover .cursor::before { content: "▶"; animation: none; }
 .text { word-break: break-word; }
 .row.done .text { color: var(--sub); text-decoration: line-through; text-decoration-thickness: .1em; }
-.clear { font-size: .5em; color: var(--gold); white-space: nowrap; }
-.row.pop .clear { animation: pop .4s steps(3); }
+/* 行頭のチェック: まだ = 白い□、済 = 金色にぬって黒いチェック */
+.check {
+  position: relative;
+  width: .8em; height: .8em;
+  margin-right: .1em;
+  font-size: inherit;
+  background: none;
+  border: max(3px, .08em) solid var(--line);
+  border-radius: .12em;
+  padding: 0;
+  cursor: pointer;
+}
+.check:hover { border-color: var(--gold); }
+.row.done .check { background: var(--gold); border-color: var(--gold); }
+.row.done .check::after {
+  content: "";
+  position: absolute; left: 50%; top: 45%;
+  width: .34em; height: .17em;
+  border-left: .09em solid #000; border-bottom: .09em solid #000;
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+.row.pop .check { animation: pop .4s steps(3); }
 @keyframes pop { from { transform: scale(2.4); opacity: 0; } }
 .row.lit { animation: appear .4s steps(4); }
 @keyframes appear { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 
-.side { display: flex; align-items: center; gap: .4em; }
-.actions { display: none; gap: .4em; }
-.row:hover .actions { display: flex; }
-.done-btn {
+.side { position: relative; display: flex; align-items: center; gap: .4em; }
+.edit-btn {
   font: inherit;
-  font-size: .45em;
-  color: var(--ink);
-  background: var(--win);
-  border: 3px solid var(--line);
-  border-radius: 8px;
-  padding: .15em .8em;
+  font-size: .5em;
+  line-height: 1;
+  color: var(--sub);
+  background: none;
+  border: none;
+  padding: .1em .2em;
   cursor: pointer;
-  white-space: nowrap;
+  opacity: 0;   /* 隠していてもキーボードで届くように、visibility ではなく透明にする */
+  transform: scaleX(-1);   /* 鉛筆の向きを左右反転（先が左下へ） */
 }
-.done-btn:hover { background: var(--gold); border-color: var(--gold); color: #000; }
-.actions button, .log-close {
+.row:hover .edit-btn, .row:focus-within .edit-btn, .edit-btn.has-note { opacity: 1; }
+@media (hover: none) { .edit-btn { opacity: 1; } }
+.edit-btn.has-note { color: var(--ink); }
+.edit-btn:hover { color: var(--gold); }
+.log-close {
   font: inherit;
   font-size: clamp(15px, 1.3vw, 22px);
   color: var(--ink);
@@ -134,30 +185,60 @@ main > * { flex: none; }
   padding: .15em .7em;
   cursor: pointer;
 }
-.actions button:hover, .log-close:hover { background: var(--ink); color: var(--win); }
+.log-close:hover { background: var(--ink); color: var(--win); }
 
-.edit-input {
+/* しゅべつのバッジ（色は名前から決まる --kc） */
+.kind {
+  display: inline-block;
+  font: inherit;
+  font-size: max(.42em, 11px);
+  line-height: 1.2;
+  padding: .15em .5em;
+  margin-right: .5em;
+  vertical-align: .35em;
+  color: var(--kc);
+  background: none;
+  border: 2px solid var(--kc);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.row.done .kind { opacity: .5; }
+
+/* しょうさいの窓 */
+.dlg .win { width: min(720px, 90vw); max-height: 86vh; overflow: auto; }
+.field { margin-top: .9em; font-size: clamp(18px, 1.6vw, 26px); }
+.field > label { display: block; color: var(--gold); margin-bottom: .3em; }
+.field input, .field textarea {
   width: 100%;
   font: inherit; color: var(--ink);
   background: transparent;
-  border: none; border-bottom: 3px dashed var(--line);
+  border: 3px solid var(--line);
+  border-radius: 8px;
+  padding: .3em .5em;
   outline: none;
-}
-
-.add-win { padding-top: 1em; padding-bottom: 1em; }
-.add {
-  display: flex; align-items: center; gap: .5em;
-  font-size: clamp(22px, 2.2vw, 36px);
-  cursor: text;
-}
-.add .plus { color: var(--gold); }
-#new {
-  flex: 1; min-width: 0;
-  font: inherit; color: var(--ink);
-  background: transparent; border: none; outline: none;
   caret-color: var(--gold);
 }
-#new::placeholder { color: var(--sub); }
+.field input::placeholder, .field textarea::placeholder { color: var(--sub); }
+.field input:focus, .field textarea:focus { border-color: var(--gold); }
+.field textarea { resize: vertical; min-height: 6em; line-height: 1.5; }
+.kinds { display: flex; flex-wrap: wrap; gap: .4em; margin-bottom: .5em; }
+.kinds:empty { display: none; }
+.kinds .kind { font-size: .75em; margin: 0; vertical-align: baseline; cursor: pointer; }
+.kinds .kind:hover, .kinds .kind.on { background: var(--kc); color: #000; }
+.dlg-btns { display: flex; justify-content: flex-end; align-items: center; gap: .6em; margin-top: 1.2em; }
+/* けす = 赤、やめる = 白（ふつう）、つづけて受注 = 金のふち、きめる・受注する = 金（いちばん押すボタン） */
+.dlg-delete { margin-right: auto; color: #ff6a5a; border-color: #ff6a5a; }
+.dlg-delete:hover, .dlg-delete.armed { background: #ff6a5a; border-color: #ff6a5a; color: #000; }
+.dlg-more { color: var(--gold); border-color: var(--gold); }
+.dlg-ok { background: var(--gold); border-color: var(--gold); color: #000; }
+.dlg-more:hover, .dlg-ok:hover { background: #fff1a8; border-color: #fff1a8; color: #000; }
+.dlg .log-head { gap: .8em; }
+.dlg-msg { margin-left: auto; color: var(--gold); font-size: clamp(14px, 1.2vw, 20px); }
+.dlg-x { padding: .05em .45em; line-height: 1.2; }
+
+/* 受注ボタン（上のバーの左。ほかの窓と同じ黒地に白の二重枠で、ひとまわり大きく） */
+.add-cmd { margin-right: auto; }
+.add-cmd .plus { color: var(--gold); }
 .none { margin: 0; font-size: clamp(26px, 2.8vw, 46px); color: var(--sub); padding: .2em 0; }
 
 /* メッセージ */
@@ -166,7 +247,7 @@ main > * { flex: none; }
 /* 戦闘シーン（メッセージ窓の右） */
 .battle-win { padding-top: 2.4em; padding-bottom: 1.4em; }
 .battle {
-  --px: clamp(5px, .6vw, 9px);
+  --px: clamp(4px, .5vw, 8px);
   position: relative;
   display: flex;
   align-items: flex-end;
@@ -219,14 +300,15 @@ main > * { flex: none; }
 @keyframes flash { 0%, 40% { opacity: .9; } 20%, 60% { opacity: 0; } 80% { opacity: .6; } 100% { opacity: 0; } }
 
 /* きろく */
-.log {
-  position: fixed; inset: 0; z-index: 20;
-  display: grid; place-items: center;
-  padding: 5vh 5vw;
-  background: rgba(0, 0, 0, .6);
+/* 窓（<dialog>）。枠の外の二重線が切れないように、dialog 自体は透明で overflow を見せる */
+.modal {
+  padding: 0; border: none; background: none;
+  color: var(--ink); font: inherit;
+  max-width: 90vw; max-height: 90vh;
+  overflow: visible;
 }
-.log[hidden] { display: none; }
-.log .win { width: min(1000px, 100%); max-height: 86vh; overflow: auto; }
+.modal::backdrop { background: rgba(0, 0, 0, .6); }
+.log .win { width: min(1000px, 90vw); max-height: 86vh; overflow: auto; }
 .log-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .4em; }
 .log-title { font-size: clamp(22px, 2.2vw, 36px); color: var(--gold); }
 .cal-nav { display: flex; justify-content: center; align-items: center; gap: 1.2em; font-size: clamp(20px, 2vw, 32px); margin-bottom: .5em; }
@@ -257,4 +339,6 @@ main > * { flex: none; }
 .day-score { color: var(--gold); }
 .day-item { display: flex; gap: .6em; line-height: 1.5; }
 .day-item.miss { color: var(--sub); }
+.day-item .kind { vertical-align: .15em; font-size: .6em; }
+.day-note { display: block; color: var(--sub); font-size: .65em; white-space: pre-wrap; margin-bottom: .3em; }
 .log-empty { color: var(--sub); margin: 0; }

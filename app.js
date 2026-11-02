@@ -40,11 +40,14 @@ function loadLog() {
   try { return JSON.parse(localStorage.getItem(LOG_KEY)) || []; } catch { return []; }
 }
 
+// しゅべつ・メモは、あるときだけ持たせる
+const extras = ({ kind, note }) => ({ ...(kind && { kind }), ...(note && { note }) });
+
 // 終わった日の中身（済・やり残しとも）をきろくに入れる
 function archive(day) {
   if (!day.tasks.length) return;
   const log = loadLog().filter((x) => x.date !== day.date);
-  log.push({ date: day.date, tasks: day.tasks.map(({ text, done }) => ({ text, done })) });
+  log.push({ date: day.date, tasks: day.tasks.map((t) => ({ text: t.text, done: t.done, ...extras(t) })) });
   log.sort((a, b) => a.date.localeCompare(b.date));
   localStorage.setItem(LOG_KEY, JSON.stringify(log));
 }
@@ -63,6 +66,31 @@ function isImeEnter(e) {
   return e.isComposing || e.keyCode === 229;
 }
 
+/* しゅべつ: 名前から色を決める（同じ名前ならいつも同じ色） */
+const KIND_COLORS = ['#ff7a6a', '#6ab8ff', '#7ad86a', '#ffd84a', '#c48aff', '#ffa94a', '#4ad8c8', '#ff8ac8'];
+function kindColor(name) {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+  return KIND_COLORS[h % KIND_COLORS.length];
+}
+function kindBadge(name, tag = 'span') {
+  const b = document.createElement(tag);
+  b.className = 'kind';
+  b.textContent = name;
+  b.style.setProperty('--kc', kindColor(name));
+  return b;
+}
+// しゅべつのバッジ＋なまえ（一覧ときろくで共通）
+function taskLabel(t) {
+  return t.kind ? [kindBadge(t.kind), t.text] : [t.text];
+}
+// これまでに使ったしゅべつ（きょう → きろくの新しい順）
+function allKinds() {
+  const kinds = new Set(state.tasks.map((t) => t.kind).filter(Boolean));
+  for (const day of loadLog().reverse()) for (const t of day.tasks) if (t.kind) kinds.add(t.kind);
+  return [...kinds];
+}
+
 /* テーマ */
 function syncSwitch() {
   const dark = document.documentElement.dataset.theme === 'dark';
@@ -78,6 +106,9 @@ $('themeBtn').addEventListener('click', () => {
 
 function render() {
   const total = state.tasks.length;
+  const cleared = state.tasks.filter((x) => x.done).length;
+  $('questCount').hidden = !total;
+  $('questCount').innerHTML = `クリア <b>${cleared}</b> / ${total}`;
   $('none').style.display = total ? 'none' : 'block';
   $('list').style.display = total ? '' : 'none';
 
@@ -97,33 +128,27 @@ function render() {
 
     const text = document.createElement('span');
     text.className = 'text';
-    text.textContent = task.text;
+    text.append(...taskLabel(task));
+    if (task.note) li.title = task.note;
 
-    // 済なら ★CLEAR!、まだなら「完了」ボタン（押すと行のクリックと同じく済になる）
-    let mark;
-    if (task.done) {
-      mark = document.createElement('span');
-      mark.className = 'clear';
-      mark.textContent = '★CLEAR!';
-    } else {
-      mark = document.createElement('button');
-      mark.className = 'done-btn';
-      mark.textContent = '完了';
-    }
+    // 行頭のチェック（○）。押すと行のクリックと同じく、済 ⇄ まだ を切り替える
+    const checkBtn = document.createElement('button');
+    checkBtn.className = 'check';
+    checkBtn.setAttribute('aria-label', task.done ? 'まだにもどす' : 'クリアにする');
+    checkBtn.setAttribute('aria-pressed', String(task.done));
 
-    const actions = document.createElement('span');
-    actions.className = 'actions';
+    // しょうさいを開くボタン。場所はいつも取っておき、ホバー中かメモがあるときだけ見せる（行の幅が変わらない）
     const editBtn = document.createElement('button');
-    editBtn.textContent = '編集';
-    const delBtn = document.createElement('button');
-    delBtn.textContent = '削除';
-    actions.append(editBtn, delBtn);
+    editBtn.className = 'edit-btn' + (task.note ? ' has-note' : '');
+    editBtn.textContent = '✎';
+    editBtn.title = 'しょうさい（へんしゅう・さくじょ）';
+    editBtn.setAttribute('aria-label', 'しょうさい');
 
     const side = document.createElement('span');
     side.className = 'side';
-    side.append(actions, mark);
+    side.append(editBtn);
 
-    li.append(cursor, text, side);
+    li.append(cursor, checkBtn, text, side);
     list.append(li);
 
     // ドラッグ&ドロップで並べ替え（落とした行の上半分なら前、下半分なら後ろへ）
@@ -177,52 +202,10 @@ function render() {
       }
     });
 
-    delBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!stillHere(task)) return;
-      state.tasks = state.tasks.filter((x) => x !== task);
-      justAdded = justDone = null;
-      save();
-      render();
-    });
-
     editBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!stillHere(task)) return;
-      editing = true;
-      const input = document.createElement('input');
-      input.className = 'edit-input';
-      input.value = task.text;
-      text.replaceWith(input);
-      li.draggable = false;
-      actions.style.display = 'none';
-      input.focus();
-      input.select();
-
-      let finished = false;
-      const finish = (commit) => {
-        if (finished) return;
-        finished = true;
-        editing = false;
-        // 編集中にほかのタブで保存されていたら読み直し、日付も確かめてから、いまの状態に反映する
-        if (pendingReload) { state = load() || state; pendingReload = false; }
-        rollover();
-        const cur = state.tasks.find((x) => x.id === task.id);
-        if (commit && cur) {
-          const v = input.value.trim();
-          if (v) cur.text = v;
-          else state.tasks = state.tasks.filter((x) => x !== cur);
-          save();
-        }
-        justAdded = justDone = null;
-        render();
-      };
-      input.addEventListener('click', (ev) => ev.stopPropagation());
-      input.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter' && !isImeEnter(ev)) finish(true);
-        if (ev.key === 'Escape') finish(false);
-      });
-      input.addEventListener('blur', () => finish(true));
+      openDialog(task);
     });
   });
 
@@ -234,6 +217,7 @@ function render() {
 const MAX_FOES = 6;
 
 let battleTimer = null;
+let slaying = false;   // 敵を倒す動きの途中（終われば自分で描き直す）
 function renderBattle(fx = {}) {
   clearTimeout(battleTimer);
   const field = $('battle');
@@ -264,14 +248,14 @@ function renderBattle(fx = {}) {
     f.append(sprite(m));
     foes.append(f);
   }
-  const rest = left.length - shown.filter((t) => t !== slain).length;
-  if (rest > 0) {
-    const more = document.createElement('span');
-    more.className = 'more';
-    more.textContent = `ほか ${rest}`;
-    foes.append(more);
-  }
+  let rest = left.length - shown.filter((t) => t !== slain).length;
+  const more = document.createElement('span');
+  more.className = 'more';
+  const setMore = () => { more.textContent = `ほか ${rest}`; more.hidden = rest <= 0; };
+  setMore();
+  foes.append(more);
 
+  slaying = !!slain;
   if (slain) {
     hero.classList.add('attack');
     battleTimer = setTimeout(() => renderBattle(), 800);
@@ -279,21 +263,168 @@ function renderBattle(fx = {}) {
     hero.classList.add('victory');
   }
   field.append(hero, foes);
+
+  // 窓の幅に収まらない敵は「ほか」にまわす（倒れていく途中の敵は残す）
+  const alive = [...foes.querySelectorAll('.foe:not(.dying)')];
+  while (field.scrollWidth > field.clientWidth && alive.length > 1) {
+    alive.pop().remove();
+    rest++;
+    setMore();
+  }
 }
 
-$('new').addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' || isImeEnter(e) || !$('log').hidden) return;
-  const v = e.target.value.trim();
-  if (!v) return;
-  rollover();
-  const task = { id: Date.now(), text: v, done: false };
+
+/* 受注: ボタンか N キーで、しょうさいの窓を「あたらしい クエスト」として開く */
+function addTask(text, kind, note) {
+  const task = { id: Date.now(), text, done: false, ...extras({ kind, note }) };
   state.tasks.push(task);
   justAdded = task.id;
   justDone = null;
   battleFx = { spawn: task.id };
   save();
-  e.target.value = '';
+}
+$('addBtn').addEventListener('click', () => openDialog(null));
+document.addEventListener('keydown', (e) => {
+  if (e.key?.toLowerCase() !== 'n' || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+  if ($('log').open || $('dlg').open || e.target.closest('input, textarea')) return;
+  e.preventDefault();
+  openDialog(null);
+});
+
+/* しょうさいの窓（いまのクエストの編集・削除と、あたらしいクエストの受注で使う） */
+let dlgId = null;   // null ならあたらしいクエスト
+let dlgAdded = 0;   // この窓で「つづけて受注」した数
+// しゅべつを選ぶボタンの列。窓を開いたときに1回だけ作り（きろくの読み込みも1回）、
+// そのあとは選んだ印だけ付けかえる（押したボタンが作り直されてフォーカスが外れないように）
+function buildKindChips() {
+  const box = $('kindChips');
+  box.replaceChildren();
+  for (const k of allKinds()) {
+    const chip = kindBadge(k, 'button');
+    chip.type = 'button';
+    chip.dataset.kind = k;
+    // 選んでいるものをもう一度押すと、しゅべつなし
+    chip.addEventListener('click', () => {
+      $('dlgKind').value = $('dlgKind').value.trim() === k ? '' : k;
+      markKindChips();
+    });
+    box.append(chip);
+  }
+  markKindChips();
+}
+function markKindChips() {
+  const cur = $('dlgKind').value.trim();
+  for (const chip of $('kindChips').children) {
+    const on = chip.dataset.kind === cur;
+    chip.classList.toggle('on', on);
+    chip.setAttribute('aria-pressed', String(on));
+  }
+}
+function openDialog(task) {
+  editing = true;
+  dlgId = task ? task.id : null;
+  $('dlgTitle').textContent = task ? 'クエストの しょうさい' : 'あたらしい クエスト';
+  $('dlgOk').textContent = task ? 'きめる' : '受注する';
+  $('dlgDelete').hidden = !task;
+  $('dlgMore').hidden = !!task;
+  $('dlgMsg').textContent = '';
+  $('dlgText').value = task ? task.text : '';
+  $('dlgKind').value = task?.kind || '';
+  $('dlgNote').value = task?.note || '';
+  dlgAdded = 0;
+  buildKindChips();
+  resetDelete();
+  $('dlg').showModal();
+  $('dlgText').focus();
+}
+// 編集中にほかのタブで保存されていたら読み直し、日付も確かめる（いまの状態に反映する前に呼ぶ）
+function syncBeforeWrite() {
+  if (pendingReload) { state = load() || state; pendingReload = false; }
+  rollover();
+  justAdded = justDone = null;
+}
+// commit: true = 保存（受注） / false = 閉じる（保存しない） / 'delete' = けす / 'more' = 受注して、つぎのクエストを書く
+function closeDialog(commit) {
+  if (!$('dlg').open) return;
+  const text = $('dlgText').value.trim();
+  const kind = $('dlgKind').value.trim();
+  const note = $('dlgNote').value.trim();
+  if (dlgId === null && commit && !text) {
+    // なまえのないクエストは受注できない。ただ「つづけて受注」したあとなら、受注を終えて閉じる
+    if (commit === true && dlgAdded) commit = false;
+    else { $('dlgText').focus(); return; }
+  }
+  if (commit === 'more') {
+    // 窓は開いたまま、しゅべつだけ残して次を書けるようにする
+    syncBeforeWrite();
+    addTask(text, kind, note);
+    dlgAdded++;
+    render();
+    $('dlgMsg').textContent = `「${text}」を 受注した！`;
+    $('dlgText').value = '';
+    $('dlgNote').value = '';
+    buildKindChips();   // いま受注したしゅべつが新しければ、ボタンに加わる
+    $('dlgText').focus();
+    return;
+  }
+  $('dlg').close();
+  editing = false;
+  syncBeforeWrite();
+  if (dlgId === null) {
+    if (commit) addTask(text, kind, note);
+  } else {
+    const cur = state.tasks.find((x) => x.id === dlgId);
+    if (commit === 'delete' && cur) {
+      state.tasks = state.tasks.filter((x) => x !== cur);
+      battleFx = {};
+      save();
+    } else if (commit && cur) {
+      if (text) cur.text = text;   // 空にしたときは元のなまえのまま
+      if (kind) cur.kind = kind; else delete cur.kind;
+      if (note) cur.note = note; else delete cur.note;
+      save();
+    }
+  }
+  dlgId = null;
   render();
+  $('addBtn').focus();
+}
+// けすは2回押し（1回目で「ほんとうに けす?」に変わる）
+function resetDelete() {
+  $('dlgDelete').classList.remove('armed');
+  $('dlgDelete').textContent = 'けす';
+}
+$('dlgDelete').addEventListener('click', () => {
+  if ($('dlgDelete').classList.contains('armed')) { closeDialog('delete'); return; }
+  $('dlgDelete').classList.add('armed');
+  $('dlgDelete').textContent = 'ほんとうに けす?';
+});
+$('dlgDelete').addEventListener('blur', resetDelete);
+$('dlgOk').addEventListener('click', () => closeDialog(true));
+$('dlgMore').addEventListener('click', () => closeDialog('more'));
+$('dlgClose').addEventListener('click', () => closeDialog(false));
+// 窓の外を押したら閉じる（窓の中で押して外で離したとき＝文字を選んでいたときは閉じない）
+let downOnBackdrop = false;
+$('dlg').addEventListener('mousedown', (e) => { downOnBackdrop = e.target === $('dlg'); });
+$('dlg').addEventListener('click', (e) => { if (downOnBackdrop && e.target === $('dlg')) closeDialog(false); });
+$('dlgKind').addEventListener('input', markKindChips);
+// Esc は dialog の cancel で受ける（日本語の変換中の Esc では cancel は起きない）
+$('dlg').addEventListener('cancel', (e) => { e.preventDefault(); closeDialog(false); });
+// ブラウザが cancel を経ずに窓を閉じたとき（Esc の連打など）も、編集中の状態を残さない
+$('dlg').addEventListener('close', () => {
+  if (!editing) return;
+  editing = false;
+  syncBeforeWrite();
+  dlgId = null;
+  render();
+  $('addBtn').focus();
+});
+$('dlg').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || isImeEnter(e)) return;
+  // 1行の欄は Enter、しょうさい欄は ⌘/Ctrl + Enter で決める（ただの Enter は改行）
+  if (e.target.tagName !== 'INPUT' && !e.metaKey && !e.ctrlKey) return;
+  e.preventDefault();
+  closeDialog(e.shiftKey && dlgId === null ? 'more' : true);
 });
 
 /* きろく（カレンダー） */
@@ -374,7 +505,13 @@ function renderDetail(recs) {
     const mk = document.createElement('span');
     mk.textContent = t.done ? '★' : '・';
     const text = document.createElement('span');
-    text.textContent = t.text;
+    text.append(...taskLabel(t));
+    if (t.note) {
+      const note = document.createElement('span');
+      note.className = 'day-note';
+      note.textContent = t.note;
+      text.append(note);
+    }
     row.append(mk, text);
     box.append(row);
   }
@@ -395,24 +532,23 @@ const openLog = () => {
   calM = now.getMonth();
   calSel = todayStr();
   renderCal();
-  $('log').hidden = false;
+  $('log').showModal();
   $('logClose').focus();
 };
-const closeLog = () => { $('log').hidden = true; $('new').focus(); };
 $('logBtn').addEventListener('click', openLog);
-$('logClose').addEventListener('click', closeLog);
-$('log').addEventListener('click', (e) => { if (e.target === $('log')) closeLog(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('log').hidden) closeLog(); });
+$('logClose').addEventListener('click', () => $('log').close());
+$('log').addEventListener('click', (e) => { if (e.target === $('log')) $('log').close(); });   // 窓の外を押したら閉じる
+$('log').addEventListener('close', () => $('addBtn').focus());   // Esc で閉じたときも
 
 // タブを開きっぱなしで日をまたいでも切り替わるように
-const check = () => {
+const checkDate = () => {
   if (editing || !rollover()) return;
   justAdded = justDone = null;
   render();
 };
-setInterval(check, 30 * 1000);
-document.addEventListener('visibilitychange', check);
-window.addEventListener('focus', check);
+setInterval(checkDate, 30 * 1000);
+document.addEventListener('visibilitychange', checkDate);
+window.addEventListener('focus', checkDate);
 
 // 一覧が窓に収まるまで文字を小さくする。34px を切りそうなら2列にする（下限 20px、それでも多ければスクロール）
 function fitList() {
@@ -435,9 +571,13 @@ function fitList() {
   ul.style.gridTemplateRows = `repeat(${Math.ceil(ul.children.length / 2)}, auto)`;
   shrink(20);
 }
-// ウィンドウの幅を変えている間は、1コマに1回だけ計算する
+// ウィンドウの幅を変えている間は、文字の大きさは1コマに1回だけ計算する。
+// 戦闘シーンは、幅を変え終わってから描き直す（倒す動きの途中なら、その動きが終わったときに描き直される）
 let fitQueued = false;
+let battleResize = null;
 window.addEventListener('resize', () => {
+  clearTimeout(battleResize);
+  battleResize = setTimeout(() => { if (!slaying) renderBattle(); }, 200);
   if (fitQueued) return;
   fitQueued = true;
   requestAnimationFrame(() => { fitQueued = false; fitList(); });
@@ -460,3 +600,6 @@ buildScene();
 syncSwitch();
 rollover();
 render();
+
+// Webフォントが読み込まれると文字幅が変わるので、もう一度収まりを計算する
+document.fonts.ready.then(fitList);
