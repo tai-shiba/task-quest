@@ -26,19 +26,14 @@
 </div>
 <main>
   <div class="topbar">
+    <button class="cmd add-cmd" id="addBtn" title="あたらしい クエスト（N）"><span class="plus">＋</span>あたらしい クエスト</button>
     <button class="cmd" id="themeBtn" role="switch" aria-label="昼（ライト）と夜（ダーク）の切り替え" title="昼 / 夜"></button>
     <button class="cmd" id="logBtn">ぼうけんの きろく</button>
   </div>
 
-  <section class="win add-win">
-    <label class="add">
-      <span class="plus">＋</span>
-      <input id="new" type="text" placeholder="クエストを受注する" autocomplete="off" autofocus>
-    </label>
-  </section>
-
   <section class="win quest">
-    <span class="win-title">きょうの クエスト</span>
+    <span class="plate win-title">クエストボード</span>
+    <span class="plate win-count" id="questCount" hidden></span>
     <ul id="list"></ul>
     <p class="none" id="none">クエストは まだ ない。</p>
   </section>
@@ -50,7 +45,7 @@
 
 <div class="flash" id="flash"></div>
 
-<section class="log" id="log" hidden>
+<dialog class="modal log" id="log">
   <div class="win">
     <div class="log-head"><span class="log-title">ぼうけんの きろく</span><button class="log-close" id="logClose">とじる</button></div>
     <div class="cal-nav">
@@ -62,7 +57,31 @@
     <div class="cal" id="cal"></div>
     <div class="cal-detail" id="calDetail"></div>
   </div>
-</section>
+</dialog>
+
+<dialog class="modal dlg" id="dlg">
+  <div class="win">
+    <div class="log-head"><span class="log-title" id="dlgTitle">クエストの しょうさい</span><span class="dlg-msg" id="dlgMsg"></span><button class="log-close dlg-x" id="dlgClose" aria-label="とじる" title="とじる（Esc）">×</button></div>
+    <div class="field">
+      <label for="dlgText">なまえ</label>
+      <input id="dlgText" type="text" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="dlgKind">しゅべつ</label>
+      <div class="kinds" id="kindChips"></div>
+      <input id="dlgKind" type="text" autocomplete="off" placeholder="あたらしい しゅべつを いれる（からなら しゅべつなし）">
+    </div>
+    <div class="field">
+      <label for="dlgNote">しょうさい</label>
+      <textarea id="dlgNote" rows="6" placeholder="メモや てじゅんを かいておける"></textarea>
+    </div>
+    <div class="dlg-btns">
+      <button class="log-close dlg-delete" id="dlgDelete">けす</button>
+      <button class="log-close dlg-more" id="dlgMore" title="Shift + Enter">つづけて受注</button>
+      <button class="log-close dlg-ok" id="dlgOk">きめる</button>
+    </div>
+  </div>
+</dialog>
 
 <script src="sprites.js"></script>
 <script src="app.js"></script>

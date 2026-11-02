@@ -1,7 +1,7 @@
 // ドット絵の定義（勇者・モンスター・昼の背景）。app.js より先に読み込む。
 
 /* ドット絵（文字の並びを1マス1色で描く） */
-// 2コマ目は剣の光（w）だけ明るく（v）して、ゆらめかせる
+// 勇者: 全身よろいの騎士。2コマ目は剣の光（w）だけ明るく（v）して、ゆらめかせる
 const KNIGHT = [
   '...........KK.....KK..',
   '..........KpPK...KWwK.',
@@ -31,60 +31,95 @@ const HERO = {
   pal: { K: '#1a1020', s: '#f5c49c', A: '#2f5fd0', a: '#1d3a8a', Y: '#e8b830', y: '#8a5a1a', W: '#f4ffff', w: '#7fdfff', L: '#c9d2dc', B: '#5a3412', M: '#d0d8e2', n: '#8b97a6', p: '#3a6ee8', P: '#9cc0ff', C: '#a0182e', c: '#6a0f20', v: '#c8f6ff' },
 };
 const MONSTERS = [
-  { // 一つ目のもこもこ
+  { // ドラゴン系: 翼を広げた赤い竜（横向き）
+    size: 0.65,   // ドットが多いぶん、1マスを小さく描いてほかと大きさをそろえる
     map: [
-      '..mmmmmm..',
-      '.mmmmmmmm.',
-      'mmmwwwmmmm',
-      'mmwwkwwmmm',
-      'mmmwwwmmmm',
-      'mmmmmmmmmm',
-      'mmmtmtmtmm',
-      '.mmmmmmmm.',
-      '.m.m..m.m.',
+      '................A......................',
+      '...............ABA.......A.............',
+      '...............ABBA.....ABA............',
+      '...............ABCBA...ABBA...A........',
+      '...............ABCCBA.ABCBA..ABA.......',
+      '................ABCCBABCCBA.ABBA.......',
+      '....AA..........ABCCCBBCCBAABCBA.......',
+      '...ADDAAA........ABCCCBCCCBABCBA.......',
+      '...AADDEEAAA.....ABCCCCBCCCBBCCBA...A..',
+      '..AEEBBBBEEEAA....ABCCCBCCCCBCCBA..ABA.',
+      '.AEEEEFGEEEEEEA...ABCCCCBCCCBCBA..ABBBA',
+      'AEEEEEEEEEEEEEEA...ABCCCCBCCBCBA.ABEBA.',
+      'AEDEDEDEEEEEEEEEA..ABCCCCCBCCBA..AEEA..',
+      'AHHHHHHHEEEEEEEEA.A.ABBBBBBBBA..AEEA...',
+      'AIDIDIIIIEEEEEEEEABAABAAAAAAA..AEEEA...',
+      '.AIIIIIIIAEEEEEEEEEEEEEEEAA...AEEEA....',
+      '..AAAAAAA.AEEEEEEEEEEEEEEEEAAAEEEA.....',
+      '...........AEEIIIIEEEEEEEEEEEEEEA......',
+      '..........AEEEIIIIIEEEEEEEEEEEEA.......',
+      '..........AEEIIIIIIIEEEEEEEEEEEA.......',
+      '..........AEEIIIIIIIEEEEEEEEEEEA.......',
+      '...........AEIIIIIIEEEEEEEEEEAA........',
+      '............AEEEEEEEEEEEEEEAA..........',
+      '............AEEEEAAAAAAEEEEEA..........',
+      '............AEEEEEA...AEEEEEEA.........',
+      '............ADEDEDA...ADEDEDEA.........',
+      '.............AAAAA.....AAAAAA..........',
     ],
-    pal: { m: '#9b59d0', w: '#ffffff', k: '#111111', t: '#ffffff' },
+    pal: { A: '#140c1c', B: '#7a1410', C: '#9a2418', D: '#ffffff', E: '#d8402a', F: '#111111', G: '#ffe14a', H: '#3a0808', I: '#ecd47a' },
   },
-  { // きのこ
-    map: [
-      '...RRRR...',
-      '.RRwRRRRR.',
-      'RRRRRRwRRR',
-      'RwRRRRRRRR',
-      '.RRRRRRRR.',
-      '...ssss...',
-      '..skssks..',
-      '..ssmmss..',
-      '...ssss...',
-      '..o....o..',
-    ],
-    pal: { R: '#e0402f', w: '#ffffff', s: '#f3dfc0', k: '#111111', m: '#7a2a1a', o: '#5a3a1a' },
-  },
-  { // コウモリ
+  { // 悪魔系: 空を飛ぶ小悪魔
     fly: true,
     map: [
-      'v..........v',
-      'vv...vv...vv',
-      'vvv.vvvv.vvv',
-      'vvvvvyvyvvvv',
-      '.vvvvvvvvvv.',
-      '..vvvwwvvv..',
-      '..v..vv..v..',
+      '......KK..KK......',
+      '.....KwK..KwK.....',
+      'K....KRKKKKRK....K',
+      'VK..KRRRRRRRRK..KV',
+      'VVK.KRyKRRyKRK.KVV',
+      'VVVKKRRRRRRRRKKVVV',
+      'VvVVKRRwKKwRRKVVvV',
+      '.VvVVKRRRRRRKVVvV.',
+      '..VvVVKRRRRKVVvV..',
+      '...VV.KRRRRK.VV...',
+      '......KRKKRK..KK..',
+      '.....KrK..KrKKrK..',
+      '.....KK....KKK....',
     ],
-    pal: { v: '#6a46a8', y: '#ffe14a', w: '#ffffff' },
+    pal: { K: '#1a1020', R: '#d84a4a', r: '#8a1a1a', V: '#6a3a9a', v: '#3a1a5a', w: '#ffffff', y: '#ffe14a' },
   },
-  { // いわ
+  { // スライム系: 紫のゼリー
     map: [
-      '...gggg...',
-      '.gggggggg.',
-      'gggGggggGg',
-      'ggykggykgg',
-      'gggggggggg',
-      'gGggGGggGg',
-      '.gggggggg.',
-      '.oo....oo.',
+      '.....KKKKKK.....',
+      '...KKJJJJJJKK...',
+      '..KJJwwJJJJJJK..',
+      '.KJJwJJJJJJJJJK.',
+      '.KJJJJJJJJJJJJK.',
+      'KJJJJkJJJJkJJJJK',
+      'KJJJJkJJJJkJJJJK',
+      'KJJJJJJkkJJJJJJK',
+      'KjJJJJJJJJJJJJjK',
+      'KjjJJJJJJJJJJjjK',
+      '.KjjjjjjjjjjjjK.',
+      '..KKKKKKKKKKKK..',
     ],
-    pal: { g: '#9a9aa6', G: '#64646f', y: '#ffffff', k: '#c0302a', o: '#4a4a52' },
+    pal: { K: '#1a1020', J: '#a85ef0', j: '#6a2ab0', w: '#f2e2ff', k: '#2a0a4a' },
+  },
+  { // 植物系: 歯の生えた食人花
+    map: [
+      '....KKKKKK....',
+      '..KKPPPPPPKK..',
+      '.KPPyPPPPyPPK.',
+      'KPPPPPPPPPPPPK',
+      'KPwKwKwKwKwPPK',
+      'KKrrrrrrrrrrKK',
+      'KPwKwKwKwKwPPK',
+      '.KPPPPPPPPPPK.',
+      '..KKpPPPPpKK..',
+      '....KKllKK....',
+      '.KK..KlLK..KK.',
+      'KLLK.KlLK.KLLK',
+      'KLLLKKlLKKLLLK',
+      '.KLLLLlLLLLLK.',
+      '..KKKKlLKKKK..',
+      '....KKKKKK....',
+    ],
+    pal: { K: '#1a1020', P: '#d84a8a', p: '#8a1a4a', w: '#ffffff', r: '#6a0a1a', L: '#4ab84a', l: '#1f6a2a', y: '#ffe14a' },
   },
 ];
 const spriteCache = new Map();
@@ -100,7 +135,7 @@ function sprite(def) {
   return c;
 }
 
-function drawSprite({ map, pal }) {
+function drawSprite({ map, pal, size = 1 }) {
   const h = map.length;
   const w = Math.max(...map.map((r) => r.length));
   const c = document.createElement('canvas');
@@ -113,8 +148,8 @@ function drawSprite({ map, pal }) {
     g.fillRect(x, y, 1, 1);
   }));
   c.className = 'sprite';
-  c.style.width = `calc(${w} * var(--px))`;
-  c.style.height = `calc(${h} * var(--px))`;
+  c.style.width = `calc(${w} * ${size} * var(--px))`;
+  c.style.height = `calc(${h} * ${size} * var(--px))`;
   return c;
 }
 
